@@ -1,0 +1,23 @@
+<div>
+  <app-search-bar (tabChanged)="tabchange($event)" (serchByEvent)="serchBy($event)">
+
+  </app-search-bar>
+  <div class="d-flex gap-2">
+    <div>תוצאות החיפוש</div>
+    <div> נמצאו {{tiklist.length}} תוצאות</div>
+
+  <div>
+    <button mat-button [matMenuTriggerFor]="menu">מיין לפי</button>
+    <mat-menu #menu="matMenu">
+      <button mat-menu-item (Click)="sortBy(0)">תאריך פתיחה</button>
+      <button (Click)="sortBy(1)" mat-menu-item>מספר תיק </button>
+    </mat-menu>
+  </div>
+  <div>
+    <i class="fa-solid fa-filter"></i>
+  </div>
+</div>
+  @for(tik of tiklist; track $index){
+  <app-result-item [itemTik]="tik"></app-result-item>
+  }
+</div>
