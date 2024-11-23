@@ -1,15 +1,40 @@
 .search-container {
     display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    padding: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px;
+    background-color: #f9f9f9; 
+    border-radius: 8px;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
   }
   
-  .search-bar {
-    width: 100%;
+  .search-input {
+    flex: 1; 
+    min-width: 300px; 
   }
   
-  .tabs-container {
-    background: #f5f5f5;
+  .filter-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  mat-button-toggle {
+    border: 1px solid #ccc;
     border-radius: 4px;
+    padding: 4px 12px;
+    font-size: 14px;
+    color: #333;
+  }
+  
+  mat-button-toggle.mat-button-toggle-checked {
+    background-color: #007bff; /* צבע רקע פעיל */
+    color: white; /* צבע טקסט פעיל */
+    border-color: #007bff;
+  }
+  
+  mat-button-toggle:hover {
+    background-color: #e7e7e7;
   }
