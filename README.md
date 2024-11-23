@@ -1,59 +1,121 @@
-# CourtsTask1
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.0.0.
+# מערכת ניהול בתי דין - ארכיטקטורה מבוססת מיקרו-שירותים
 
-## Development server
+## **תיאור המערכת**
+מערכת ניהול בתי הדין נועדה לנהל באופן מקיף את מחזור החיים של תיקים משפטיים, החל מהגשת התיק, דרך ניהול דיונים, מסמכים, החלטות ובקשות, ועד הפצת הודעות לגורמים הרלוונטיים. המערכת בנויה על ארכיטקטורת מיקרו-שירותים, תוך הקפדה על חלוקה לוגית, תקשורת יעילה בין רכיבי המערכת, ואבטחה גבוהה.
 
-To start a local development server, run:
+---
 
-```bash
-ng serve
+## **חלוקת המערכת למיקרו-שירותים**
+
+### **Core Services** (שירותי ליבה)
+
+#### **Case Service** - ניהול מחזור חיי התיק
+- יצירת תיק חדש
+- עדכון סטטוס תיק
+- ניהול החלטות ובקשות ביניים
+
+#### **User Service** - ניהול משתמשים
+- שמירת נתוני משתמשים ותפקידים
+- ניהול הרשאות על בסיס OAuth 2.0
+
+#### **Document Service** - ניהול מסמכים
+- העלאה, שמירה וגרסאות של מסמכים
+- אחסון המסמכים ב-Amazon S3 עם מטא-דאטה ב-PostgreSQL
+
+#### **Hearing Service** - ניהול דיונים
+- תזמון דיונים
+- ניהול פרוטוקולים וזימון משתתפים
+
+---
+
+### **Supporting Services** (שירותים תומכים)
+
+#### **Notification Service** - שירות התראות
+- שליחת מיילים, הודעות SMS והתראות מערכת
+- תיעדוף הודעות (High Priority/Low Priority)
+
+#### **Audit Service** - שירות מעקב
+- תיעוד פעולות משתמשים ושירותים
+- שמירת לוגים ב-Elasticsearch לצורך חיפוש וניתוח
+
+#### **Search Service** - שירות חיפוש
+- אינדוקס תיקים, מסמכים ודיונים ב-Elasticsearch
+- מענה על חיפושים טקסטואליים וסינונים מתקדמים
+
+---
+
+## **תקשורת בין רכיבי המערכת**
+
+### **API Gateway**
+- משמש כשכבת כניסה מאובטחת לכלל השירותים.
+- תומך ב-Rate Limiting, אימות באמצעות JWT והפניית קריאות לשירותים המתאימים.
+
+### **Message Queue**
+- **RabbitMQ**: נבחר לניהול התראות.
+- **Kafka**: נבחר לתיעוד פעולות ולוגים.
+
+### **קריאות סינכרוניות**
+- מתבצעות ב-REST (או GraphQL אם נדרש חיפוש גמיש יותר).
+- בין שירותי ליבה, לדוגמה: Case Service פונה ל-User Service לאימות נתונים.
+
+### **קריאות אסינכרוניות**
+- תור ההודעות (RabbitMQ/Kafka) משמש לתקשורת שאינה דורשת תגובה מיידית.
+- מבטיח עמידות בתקלות, עם מנגנון Retry מובנה.
+
+---
+
+## **שיקולים טכנולוגיים**
+- **אבטחה**: שימוש ב-HTTPS להצפנת תקשורת, אימות משתמשים ב-OAuth 2.0, ו-API Gateway להגבלת גישה וניהול הרשאות.
+- **מסדי נתונים**:  
+  - **PostgreSQL**: לניהול נתונים רלציוניים (תיקים, משתמשים).
+  - **Elasticsearch**: לחיפושים מהירים.
+  - **Redis**: לניהול תורים זמניים (Cache) ולשיפור זמני תגובה.
+- **סקלאביליות**: כל שירות ניתן להרחבה עצמאית בהתאם לעומסים.
+- **ניטור ובקרה**: Prometheus ו-Grafana לניטור ביצועים, ו-Zipkin לטרייסינג בין שירותים.
+
+---
+
+## **תרשים ארכיטקטורה (Mermaid)**
+
+```mermaid
+graph TD
+    UI[Client (Web/Frontend)]
+    API[API Gateway]
+
+    UI --> API
+    API --> CaseService[Case Service]
+    API --> UserService[User Service]
+    API --> DocumentService[Document Service]
+    API --> HearingService[Hearing Service]
+    API --> NotificationService[Notification Service]
+    API --> AuditService[Audit Service]
+    API --> SearchService[Search Service]
+
+    subgraph Async Communication
+        CaseService -->|RabbitMQ| NotificationService
+        CaseService -->|Kafka| AuditService
+        DocumentService -->|Kafka| AuditService
+        HearingService -->|RabbitMQ| NotificationService
+        HearingService -->|Kafka| AuditService
+    end
+
+    subgraph Sync Communication
+        CaseService -->|REST| UserService
+        CaseService -->|REST| DocumentService
+        HearingService -->|REST| CaseService
+    end
+
+    SearchService -->|Elasticsearch| AuditService
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+---
 
-## Code scaffolding
+## **יתרונות הארכיטקטורה**
+1. **הפרדה ברורה**: חלוקה ברורה לתחומי אחריות מונעת תלותיות בין שירותים.
+2. **גמישות טכנולוגית**: כל שירות משתמש בטכנולוגיות המתאימות לצרכיו.
+3. **יעילות בתקשורת**: שילוב של תורים לקריאות אסינכרוניות ו-REST לקריאות סינכרוניות.
+4. **יכולת הרחבה**: כל רכיב ניתן להרחבה עצמאית.
+5. **אבטחה חזקה**: שילוב של הצפנה, אימות והרשאות ברמת השירות.
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+ארכיטקטורה זו מאפשרת תפעול יעיל ומאובטח של מערכת מורכבת עם פוטנציאל לגידול עתידי.
